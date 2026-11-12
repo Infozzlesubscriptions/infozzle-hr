@@ -4,7 +4,7 @@ export type Status = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'active
 export interface User { id: string; name: string; email: string; role: Role; avatarUrl?: string }
 export interface Department { id: string; name: string }
 export interface Employee {
-  id: string; employeeId?: string; firstName: string; lastName: string; email: string; phone?: string;
+  id: string; employeeId?: string; firstName: string; lastName: string; email: string; personalEmail?: string; phone?: string; address?: string; dateOfBirth?: string; profilePhotoUrl?: string | null;
   department?: Department | string; designation?: string; joiningDate?: string; status: Status; manager?: Pick<Employee, 'id' | 'firstName' | 'lastName'>
 }
 export interface LeaveRequest {
