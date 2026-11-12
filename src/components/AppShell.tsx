@@ -39,5 +39,5 @@ export function AppShell() {
   </div>
 }
 
-function Brand() { return <div className="flex items-center gap-3"><div className="rounded-lg bg-white px-2 py-1.5"><img src="/infozzle-logo.svg" alt="Infozzle" className="h-7 w-auto" /></div><p className="text-[10px] uppercase tracking-[.2em] text-white/45">HR portal</p></div> }
+function Brand() { return <div className="flex items-center gap-3"><div className="rounded-lg bg-white px-2 py-1.5"><img src="/infozzle-logo.png" alt="Infozzle" className="h-7 w-auto" /></div><p className="text-[10px] uppercase tracking-[.2em] text-white/45">HR portal</p></div> }
 function Profile({ user, onLogout }: { user: ReturnType<typeof useAuth>['user']; onLogout: () => void }) { return <div className="flex items-center gap-3 border-t border-white/10 pt-4"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-mint text-sm font-bold text-forest">{user?.name?.slice(0, 2).toUpperCase()}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">{user?.name}</p><p className="text-xs text-white/45">{user?.role}</p></div><button aria-label="Log out" className="text-white/55 hover:text-white" onClick={onLogout}><LogOut className="size-4" /></button></div> }
