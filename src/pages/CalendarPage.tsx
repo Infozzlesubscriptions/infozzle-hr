@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../lib/auth'
+import { Plus } from 'lucide-react'
 
 const schema = z.object({ title: z.string().min(1, 'Required'), date: z.string().min(1, 'Required'), endDate: z.string().optional(), description: z.string().optional() })
 type Values = z.infer<typeof schema>
@@ -23,12 +24,13 @@ export function CalendarPage() {
   const [selected, setSelected] = useState<CalendarEvent | null>(null)
   const [newDate, setNewDate] = useState<string | null>(null)
   const { user } = useAuth()
+  const canManageHolidays = user?.role === 'HR' || user?.role === 'MD'
   const query = useQuery({ queryKey: ['calendar', range], enabled: !!range.start, queryFn: () => api.get<CalendarEvent[]>('/calendar/events', { params: range }).then(r => r.data) })
-  const clickDate = (arg: DateClickArg) => { if (user?.role === 'HR') setNewDate(arg.dateStr) }
+  const clickDate = (arg: DateClickArg) => { if (canManageHolidays) setNewDate(arg.dateStr) }
   const clickEvent = (arg: EventClickArg) => setSelected({ id: arg.event.id, title: arg.event.title, start: arg.event.startStr, end: arg.event.endStr || undefined, allDay: arg.event.allDay, ...arg.event.extendedProps } as CalendarEvent)
-  return <><PageHeader eyebrow="Shared rhythm" title="Company calendar" description="Leave, remote work, onboarding milestones, and company holidays in one view." />
-    <div className="card p-3 sm:p-6">{query.isError ? <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /> : <FullCalendar plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]} initialView="dayGridMonth" headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,dayGridYear' }} views={{ dayGridYear: { type: 'dayGrid', duration: { years: 1 }, buttonText: 'year' } }} events={query.data || []} datesSet={arg => setRange({ start: arg.startStr, end: arg.endStr })} dateClick={clickDate} eventClick={clickEvent} height="auto" dayMaxEvents nowIndicator selectable={user?.role === 'HR'} />}{query.isLoading && <Spinner label="Loading calendar..." />}</div>
-    <EventDetail event={selected} close={() => setSelected(null)} canDelete={user?.role === 'HR'} />
+  return <><PageHeader eyebrow="Shared rhythm" title="Company calendar" description="Leave, remote work, onboarding milestones, and public holidays in one view." actions={canManageHolidays && <button className="btn-primary" onClick={() => setNewDate(new Date().toISOString().slice(0, 10))}><Plus className="size-4" /> Add public holiday</button>} />
+    <div className="card p-3 sm:p-6">{query.isError ? <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /> : <FullCalendar plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]} initialView="dayGridMonth" headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,dayGridYear' }} views={{ dayGridYear: { type: 'dayGrid', duration: { years: 1 }, buttonText: 'year' } }} events={query.data || []} datesSet={arg => setRange({ start: arg.startStr, end: arg.endStr })} dateClick={clickDate} eventClick={clickEvent} height="auto" dayMaxEvents nowIndicator selectable={canManageHolidays} />}{query.isLoading && <Spinner label="Loading calendar..." />}</div>
+    <EventDetail event={selected} close={() => setSelected(null)} canDelete={canManageHolidays} />
     <HolidayForm date={newDate} close={() => setNewDate(null)} />
   </>
 }
@@ -37,7 +39,7 @@ function HolidayForm({ date, close }: { date: string | null; close: () => void }
   const client = useQueryClient()
   const { register, handleSubmit, formState: { errors } } = useForm<Values>({ resolver: zodResolver(schema), values: { title: '', date: date || '', endDate: '', description: '' } })
   const mutation = useMutation({ mutationFn: (values: Values) => api.post('/calendar/holidays', values), onSuccess: () => { toast.success('Holiday added'); client.invalidateQueries({ queryKey: ['calendar'] }); close() }, onError: error => toast.error(messageFromError(error)) })
-  return <Modal open={!!date} onClose={close} title="Add company holiday"><form className="space-y-4" onSubmit={handleSubmit(values => mutation.mutate(values))}><div><label className="label">Holiday name</label><input className="field" {...register('title')} /><FieldError message={errors.title?.message} /></div><div className="grid grid-cols-2 gap-3"><div><label className="label">Date</label><input type="date" className="field" {...register('date')} /></div><div><label className="label">End date</label><input type="date" className="field" {...register('endDate')} /></div></div><div><label className="label">Description</label><textarea className="field min-h-20 py-3" {...register('description')} /></div><div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={close}>Cancel</button><button className="btn-primary" disabled={mutation.isPending}>Add holiday</button></div></form></Modal>
+  return <Modal open={!!date} onClose={close} title="Add public holiday"><form className="space-y-4" onSubmit={handleSubmit(values => mutation.mutate(values))}><div><label className="label">Holiday name</label><input className="field" {...register('title')} /><FieldError message={errors.title?.message} /></div><div><label className="label">Date</label><input type="date" className="field" {...register('date')} /></div><div><label className="label">Description</label><textarea className="field min-h-20 py-3" {...register('description')} /></div><div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={close}>Cancel</button><button className="btn-primary" disabled={mutation.isPending}>Add public holiday</button></div></form></Modal>
 }
 
 function EventDetail({ event, close, canDelete }: { event: CalendarEvent | null; close: () => void; canDelete: boolean }) {

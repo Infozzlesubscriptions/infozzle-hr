@@ -8,7 +8,7 @@ import type { Paginated, User } from '../lib/types'
 import { getList } from '../lib/types'
 import { ConfirmDialog, ErrorState, PageHeader, Spinner, StatusBadge } from '../components/ui'
 
-type SettingsData = { company: { name: string; timezone: string; fiscalYearStart: string }; wfh: { monthlyLimit: number; advanceNoticeDays: number }; leaveTypes: { id: string; name: string; days: number; color?: string }[] }
+type SettingsData = { company: { name: string; timezone: string; fiscalYearStart: string }; wfh: { monthlyLimit: number; dailyCompanyLimit: number; advanceNoticeDays: number }; leaveTypes: { id: string; name: string; days: number; color?: string }[] }
 type Department = { id: string; name: string; code: string; designations: { id: string; name: string }[] }
 
 export function SettingsPage() {
@@ -46,7 +46,7 @@ function CompanyForm({ data, disabled }: { data: SettingsData['company']; disabl
 function WfhForm({ data, disabled }: { data: SettingsData['wfh']; disabled: boolean }) {
   const client = useQueryClient(); const [values, setValues] = useState(data)
   const mutation = useMutation({ mutationFn: () => api.patch('/settings/wfh', values), onSuccess: () => { toast.success('WFH policy saved'); client.invalidateQueries({ queryKey: ['settings'] }) }, onError: e => toast.error(messageFromError(e)) })
-  return <form className="card max-w-2xl space-y-4 p-6" onSubmit={e => { e.preventDefault(); mutation.mutate() }}><SettingInput label="Monthly day limit" type="number" value={String(values.monthlyLimit)} set={value => setValues({ ...values, monthlyLimit: Number(value) })} disabled={disabled} /><SettingInput label="Advance notice (days)" type="number" value={String(values.advanceNoticeDays)} set={value => setValues({ ...values, advanceNoticeDays: Number(value) })} disabled={disabled} />{!disabled && <button className="btn-primary">Save policy</button>}</form>
+  return <form className="card max-w-2xl space-y-4 p-6" onSubmit={e => { e.preventDefault(); mutation.mutate() }}><SettingInput label="Monthly day limit per employee" type="number" value={String(values.monthlyLimit)} set={value => setValues({ ...values, monthlyLimit: Number(value) })} disabled={disabled} /><SettingInput label="Daily company capacity" type="number" value={String(values.dailyCompanyLimit)} set={value => setValues({ ...values, dailyCompanyLimit: Number(value) })} disabled={disabled} /><SettingInput label="Advance notice (days)" type="number" value={String(values.advanceNoticeDays)} set={value => setValues({ ...values, advanceNoticeDays: Number(value) })} disabled={disabled} /><p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">WFH is limited to Tuesday–Thursday, cannot follow a public holiday, and selected dates cannot be consecutive.</p>{!disabled && <button className="btn-primary">Save policy</button>}</form>
 }
 function SettingInput({ label, value, set, type = 'text', disabled }: { label: string; value: string; set: (value: string) => void; type?: string; disabled: boolean }) { return <label className="block"><span className="label">{label}</span><input required type={type} className="field" value={value} disabled={disabled} onChange={e => set(e.target.value)} /></label> }
 
