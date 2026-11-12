@@ -1,0 +1,56 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus, Trash2 } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
+import { api, messageFromError } from '../lib/api'
+import { useAuth } from '../lib/auth'
+import type { Paginated, User } from '../lib/types'
+import { getList } from '../lib/types'
+import { ConfirmDialog, ErrorState, PageHeader, Spinner, StatusBadge } from '../components/ui'
+
+type SettingsData = { company: { name: string; timezone: string; fiscalYearStart: string }; wfh: { monthlyLimit: number; advanceNoticeDays: number }; leaveTypes: { id: string; name: string; days: number; color?: string }[] }
+
+export function SettingsPage() {
+  const [tab, setTab] = useState('company')
+  const { user } = useAuth()
+  const query = useQuery({ queryKey: ['settings'], queryFn: () => api.get<SettingsData>('/settings').then(r => r.data) })
+  return <><PageHeader eyebrow="Configuration" title="Settings" description="Policies and access controls for your workspace." />
+    <div className="mb-5 flex gap-1 overflow-x-auto border-b border-black/8">{['company', 'WFH policy', 'leave types', 'users', 'security'].map(label => { const value = label.toLowerCase().replace(' policy', '').replace(' ', '-'); return <button key={label} className={`shrink-0 px-4 py-3 text-sm font-semibold capitalize ${tab === value ? 'border-b-2 border-forest text-forest' : 'text-black/45'}`} onClick={() => setTab(value)}>{label}</button> })}</div>
+    {user?.role !== 'HR' && tab !== 'security' && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">You have read-only access. HR controls workspace configuration.</p>}
+    {tab === 'security' ? <SecurityForm /> : query.isLoading ? <Spinner /> : query.isError ? <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /> : query.data && <>{tab === 'company' && <CompanyForm data={query.data.company} disabled={user?.role !== 'HR'} />}{tab === 'wfh' && <WfhForm data={query.data.wfh} disabled={user?.role !== 'HR'} />}{tab === 'leave-types' && <LeaveTypes items={query.data.leaveTypes} disabled={user?.role !== 'HR'} />}{tab === 'users' && <UsersSettings disabled={user?.role !== 'HR'} />}</>}
+  </>
+}
+
+function SecurityForm() {
+  const { logout } = useAuth(); const [values, setValues] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const mutation = useMutation({ mutationFn: () => api.post('/auth/change-password', { currentPassword: values.currentPassword, newPassword: values.newPassword }), onSuccess: async () => { toast.success('Password changed. Sign in again.'); await logout() }, onError: e => toast.error(messageFromError(e)) })
+  return <form className="card max-w-2xl space-y-4 p-6" onSubmit={event => { event.preventDefault(); if (values.newPassword !== values.confirmPassword) return toast.error('New passwords do not match'); mutation.mutate() }}><SettingInput label="Current password" type="password" value={values.currentPassword} set={currentPassword => setValues({ ...values, currentPassword })} disabled={mutation.isPending} /><SettingInput label="New password (12+ characters)" type="password" value={values.newPassword} set={newPassword => setValues({ ...values, newPassword })} disabled={mutation.isPending} /><SettingInput label="Confirm new password" type="password" value={values.confirmPassword} set={confirmPassword => setValues({ ...values, confirmPassword })} disabled={mutation.isPending} /><button className="btn-primary" disabled={mutation.isPending || values.newPassword.length < 12}>Change password</button></form>
+}
+
+function CompanyForm({ data, disabled }: { data: SettingsData['company']; disabled: boolean }) {
+  const client = useQueryClient(); const [values, setValues] = useState(data)
+  const mutation = useMutation({ mutationFn: () => api.patch('/settings/company', values), onSuccess: () => { toast.success('Company settings saved'); client.invalidateQueries({ queryKey: ['settings'] }) }, onError: e => toast.error(messageFromError(e)) })
+  return <form className="card max-w-2xl space-y-4 p-6" onSubmit={e => { e.preventDefault(); mutation.mutate() }}><SettingInput label="Company name" value={values.name} set={name => setValues({ ...values, name })} disabled={disabled} /><SettingInput label="Timezone" value={values.timezone} set={timezone => setValues({ ...values, timezone })} disabled={disabled} /><SettingInput label="Fiscal year starts" type="date" value={values.fiscalYearStart} set={fiscalYearStart => setValues({ ...values, fiscalYearStart })} disabled={disabled} />{!disabled && <button className="btn-primary">Save changes</button>}</form>
+}
+function WfhForm({ data, disabled }: { data: SettingsData['wfh']; disabled: boolean }) {
+  const client = useQueryClient(); const [values, setValues] = useState(data)
+  const mutation = useMutation({ mutationFn: () => api.patch('/settings/wfh', values), onSuccess: () => { toast.success('WFH policy saved'); client.invalidateQueries({ queryKey: ['settings'] }) }, onError: e => toast.error(messageFromError(e)) })
+  return <form className="card max-w-2xl space-y-4 p-6" onSubmit={e => { e.preventDefault(); mutation.mutate() }}><SettingInput label="Monthly day limit" type="number" value={String(values.monthlyLimit)} set={value => setValues({ ...values, monthlyLimit: Number(value) })} disabled={disabled} /><SettingInput label="Advance notice (days)" type="number" value={String(values.advanceNoticeDays)} set={value => setValues({ ...values, advanceNoticeDays: Number(value) })} disabled={disabled} />{!disabled && <button className="btn-primary">Save policy</button>}</form>
+}
+function SettingInput({ label, value, set, type = 'text', disabled }: { label: string; value: string; set: (value: string) => void; type?: string; disabled: boolean }) { return <label className="block"><span className="label">{label}</span><input required type={type} className="field" value={value} disabled={disabled} onChange={e => set(e.target.value)} /></label> }
+
+function LeaveTypes({ items, disabled }: { items: SettingsData['leaveTypes']; disabled: boolean }) {
+  const client = useQueryClient(); const [name, setName] = useState(''); const [days, setDays] = useState('')
+  const add = useMutation({ mutationFn: () => api.post('/settings/leave-types', { name, days: Number(days) }), onSuccess: () => { toast.success('Leave type added'); setName(''); setDays(''); client.invalidateQueries({ queryKey: ['settings'] }) }, onError: e => toast.error(messageFromError(e)) })
+  const remove = useMutation({ mutationFn: (id: string) => api.delete(`/settings/leave-types/${id}`), onSuccess: () => client.invalidateQueries({ queryKey: ['settings'] }), onError: e => toast.error(messageFromError(e)) })
+  return <div className="card max-w-3xl p-6">{!disabled && <form onSubmit={(e: FormEvent) => { e.preventDefault(); add.mutate() }} className="mb-5 grid gap-3 sm:grid-cols-[1fr_140px_auto]"><input required className="field" placeholder="Leave type name" value={name} onChange={e => setName(e.target.value)} /><input required min="0" type="number" className="field" placeholder="Days/year" value={days} onChange={e => setDays(e.target.value)} /><button className="btn-primary"><Plus className="size-4" /> Add</button></form>}<div className="divide-y divide-black/7">{items.map(item => <div key={item.id} className="flex items-center py-4"><span className="mr-3 size-3 rounded-full" style={{ background: item.color || '#579b7d' }} /><p className="flex-1 font-semibold">{item.name}</p><span className="mr-4 text-sm text-black/45">{item.days} days/year</span>{!disabled && <button aria-label={`Delete ${item.name}`} onClick={() => remove.mutate(item.id)} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Trash2 className="size-4" /></button>}</div>)}</div></div>
+}
+
+function UsersSettings({ disabled }: { disabled: boolean }) {
+  const [removeId, setRemoveId] = useState<string | null>(null); const [invite, setInvite] = useState({ name: '', email: '', role: 'HR', password: '' }); const client = useQueryClient()
+  const query = useQuery({ queryKey: ['settings', 'users'], queryFn: () => api.get<Paginated<User> | User[]>('/settings/users').then(r => getList(r.data)) })
+  const remove = useMutation({ mutationFn: () => api.delete(`/settings/users/${removeId}`), onSuccess: () => { toast.success('User access removed'); setRemoveId(null); client.invalidateQueries({ queryKey: ['settings', 'users'] }) }, onError: e => toast.error(messageFromError(e)) })
+  const add = useMutation({ mutationFn: () => api.post('/settings/users', invite), onSuccess: () => { toast.success('User account created'); setInvite({ name: '', email: '', role: 'HR', password: '' }); client.invalidateQueries({ queryKey: ['settings', 'users'] }) }, onError: e => toast.error(messageFromError(e)) })
+  if (query.isLoading) return <Spinner />
+  return <div className="card max-w-3xl p-6">{!disabled && <form className="mb-5 grid gap-3 border-b border-black/7 pb-5 sm:grid-cols-2" onSubmit={event => { event.preventDefault(); add.mutate() }}><input required aria-label="User name" className="field" placeholder="Full name" value={invite.name} onChange={e => setInvite({ ...invite, name: e.target.value })} /><input required aria-label="User email" type="email" className="field" placeholder="Work email" value={invite.email} onChange={e => setInvite({ ...invite, email: e.target.value })} /><input required minLength={12} aria-label="Temporary password" type="password" className="field" placeholder="Temporary password (12+ characters)" value={invite.password} onChange={e => setInvite({ ...invite, password: e.target.value })} /><select aria-label="User role" className="field" value={invite.role} onChange={e => setInvite({ ...invite, role: e.target.value })}><option>HR</option><option>MD</option></select><button className="btn-primary sm:col-span-2" disabled={add.isPending}><Plus className="size-4" /> Create user</button></form>}<div className="divide-y divide-black/7">{query.data?.map(item => <div key={item.id} className="flex items-center gap-3 py-4 first:pt-0 last:pb-0"><span className="grid size-10 place-items-center rounded-full bg-mint text-sm font-bold text-forest">{item.name.slice(0, 2).toUpperCase()}</span><div className="flex-1"><p className="font-semibold">{item.name}</p><p className="text-xs text-black/45">{item.email}</p></div><StatusBadge status={item.role} />{!disabled && <button aria-label="Remove access" className="rounded-lg p-2 text-red-600" onClick={() => setRemoveId(item.id)}><Trash2 className="size-4" /></button>}</div>)}</div><ConfirmDialog open={!!removeId} title="Remove user access?" message="This person will no longer be able to sign in to the HR portal." dangerous confirmLabel="Remove access" busy={remove.isPending} onClose={() => setRemoveId(null)} onConfirm={() => remove.mutate()} /></div>
+}

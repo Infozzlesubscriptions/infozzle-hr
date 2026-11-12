@@ -1,0 +1,25 @@
+import { useQuery } from '@tanstack/react-query'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ArrowDownRight, ArrowUpRight, UsersRound } from 'lucide-react'
+import { api, messageFromError } from '../lib/api'
+import type { DashboardData, Department, Paginated } from '../lib/types'
+import { getList } from '../lib/types'
+import { ErrorState, formatDate, PageHeader, Spinner } from '../components/ui'
+import { useState } from 'react'
+
+export function DashboardPage() {
+  const [department, setDepartment] = useState('')
+  const [range, setRange] = useState('30d')
+  const query = useQuery({ queryKey: ['dashboard', department, range], queryFn: () => api.get<DashboardData>('/dashboard', { params: { department: department || undefined, range } }).then(r => r.data) })
+  const departments = useQuery({ queryKey: ['departments'], queryFn: () => api.get<Paginated<Department> | Department[]>('/departments').then(r => getList(r.data)) })
+  const filters = <><select aria-label="Date range" className="field !w-auto" value={range} onChange={e => setRange(e.target.value)}><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="1y">This year</option></select><select aria-label="Department" className="field !w-auto max-w-48" value={department} onChange={e => setDepartment(e.target.value)}><option value="">All departments</option>{departments.data?.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></>
+  if (query.isLoading) return <><PageHeader eyebrow="Command center" title="Good work starts with clarity" actions={filters} /><Spinner label="Building your overview..." /></>
+  if (query.isError || !query.data) return <><PageHeader eyebrow="Command center" title="Good work starts with clarity" actions={filters} /><ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /></>
+  const data = query.data
+  return <><PageHeader eyebrow="Command center" title="Good work starts with clarity" description="Live signals across your people operations." actions={filters} />
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{data.metrics.map(metric => <article className="card p-5" key={metric.key}><div className="flex items-start justify-between"><p className="text-sm font-semibold text-black/50">{metric.label}</p><span className="rounded-lg bg-mint p-2 text-forest"><UsersRound className="size-4" /></span></div><p className="mt-5 font-display text-4xl font-semibold">{metric.value.toLocaleString()}</p>{metric.change !== undefined && <p className={`mt-2 flex items-center gap-1 text-xs font-semibold ${metric.change >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{metric.change >= 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}{Math.abs(metric.change)}% vs prior period</p>}</article>)}</section>
+    <section className="mt-5 grid gap-5 xl:grid-cols-[1.5fr_1fr]"><article className="card p-5 sm:p-7"><div className="mb-6"><p className="eyebrow">Workforce</p><h2 className="mt-1 font-display text-2xl">Headcount trend</h2></div><div className="h-72"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data.headcountTrend}><defs><linearGradient id="headcount" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#579b7d" stopOpacity={.35}/><stop offset="95%" stopColor="#579b7d" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#17211d15"/><XAxis dataKey="label" tickLine={false} axisLine={false}/><YAxis tickLine={false} axisLine={false}/><Tooltip/><Area type="monotone" dataKey="value" stroke="#173f32" strokeWidth={3} fill="url(#headcount)"/></AreaChart></ResponsiveContainer></div></article>
+      <article className="card p-5 sm:p-7"><div className="mb-6"><p className="eyebrow">Time away</p><h2 className="mt-1 font-display text-2xl">Leave by department</h2></div><div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={data.leaveByDepartment} layout="vertical"><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#17211d15"/><XAxis type="number" hide/><YAxis dataKey="department" type="category" width={90} axisLine={false} tickLine={false}/><Tooltip/><Bar dataKey="value" fill="#d87355" radius={[0,7,7,0]}/></BarChart></ResponsiveContainer></div></article></section>
+    <section className="card mt-5 p-5 sm:p-7"><p className="eyebrow">Coming up</p><h2 className="mt-1 font-display text-2xl">Schedule</h2><div className="mt-5 grid gap-3 md:grid-cols-3">{data.upcoming.length ? data.upcoming.map(event => <div key={event.id} className="rounded-xl bg-paper p-4"><p className="text-xs font-bold uppercase tracking-wider text-clay">{event.type || 'Event'}</p><p className="mt-2 font-semibold">{event.title}</p><p className="mt-1 text-sm text-black/45">{formatDate(event.start)}</p></div>) : <p className="text-sm text-black/50">Nothing scheduled.</p>}</div></section>
+  </>
+}
