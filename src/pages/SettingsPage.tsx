@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { api, messageFromError } from '../lib/api'
 import { useAuth } from '../lib/auth'
@@ -10,15 +10,16 @@ import { ConfirmDialog, ErrorState, PageHeader, Spinner, StatusBadge } from '../
 
 type SettingsData = { company: { name: string; timezone: string; fiscalYearStart: string }; wfh: { monthlyLimit: number; dailyCompanyLimit: number; advanceNoticeDays: number }; leaveTypes: { id: string; name: string; days: number; color?: string }[] }
 type Department = { id: string; name: string; code: string; designations: { id: string; name: string }[] }
+type SmtpSettings = { host: string; port: number; secure: boolean; username?: string; fromEmail: string; fromName?: string; passwordConfigured: boolean }
 
 export function SettingsPage() {
   const [tab, setTab] = useState('company')
   const { user } = useAuth()
   const query = useQuery({ queryKey: ['settings'], queryFn: () => api.get<SettingsData>('/settings').then(r => r.data) })
   return <><PageHeader eyebrow="Configuration" title="Settings" description="Policies and access controls for your workspace." />
-    <div className="mb-5 flex gap-1 overflow-x-auto border-b border-black/8">{['company', 'departments', 'WFH policy', 'leave types', 'users', 'security'].map(label => { const value = label.toLowerCase().replace(' policy', '').replace(' ', '-'); return <button key={label} className={`shrink-0 px-4 py-3 text-sm font-semibold capitalize ${tab === value ? 'border-b-2 border-forest text-forest' : 'text-black/45'}`} onClick={() => setTab(value)}>{label}</button> })}</div>
-    {user?.role !== 'HR' && tab !== 'security' && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">You have read-only access. HR controls workspace configuration.</p>}
-    {tab === 'security' ? <SecurityForm /> : tab === 'departments' ? <DepartmentsSettings disabled={user?.role !== 'HR'} /> : query.isLoading ? <Spinner /> : query.isError ? <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /> : query.data && <>{tab === 'company' && <CompanyForm data={query.data.company} disabled={user?.role !== 'HR'} />}{tab === 'wfh' && <WfhForm data={query.data.wfh} disabled={user?.role !== 'HR'} />}{tab === 'leave-types' && <LeaveTypes items={query.data.leaveTypes} disabled={user?.role !== 'HR'} />}{tab === 'users' && <UsersSettings disabled={user?.role !== 'HR'} />}</>}
+    <div className="mb-5 flex gap-1 overflow-x-auto border-b border-black/8">{['company', 'departments', 'WFH policy', 'leave types', 'users', 'SMTP', 'security'].map(label => { const value = label.toLowerCase().replace(' policy', '').replace(' ', '-'); return <button key={label} className={`shrink-0 px-4 py-3 text-sm font-semibold capitalize ${tab === value ? 'border-b-2 border-forest text-forest' : 'text-black/45'}`} onClick={() => setTab(value)}>{label}</button> })}</div>
+    {user?.role !== 'HR' && !['security', 'smtp'].includes(tab) && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">You have read-only access. HR controls workspace configuration.</p>}
+    {tab === 'security' ? <SecurityForm /> : tab === 'smtp' ? <SmtpForm /> : tab === 'departments' ? <DepartmentsSettings disabled={user?.role !== 'HR'} /> : query.isLoading ? <Spinner /> : query.isError ? <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /> : query.data && <>{tab === 'company' && <CompanyForm data={query.data.company} disabled={user?.role !== 'HR'} />}{tab === 'wfh' && <WfhForm data={query.data.wfh} disabled={user?.role !== 'HR'} />}{tab === 'leave-types' && <LeaveTypes items={query.data.leaveTypes} disabled={user?.role !== 'HR'} />}{tab === 'users' && <UsersSettings disabled={user?.role !== 'HR'} />}</>}
   </>
 }
 
@@ -36,6 +37,18 @@ function SecurityForm() {
   const { logout } = useAuth(); const [values, setValues] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const mutation = useMutation({ mutationFn: () => api.post('/auth/change-password', { currentPassword: values.currentPassword, newPassword: values.newPassword }), onSuccess: async () => { toast.success('Password changed. Sign in again.'); await logout() }, onError: e => toast.error(messageFromError(e)) })
   return <form className="card max-w-2xl space-y-4 p-6" onSubmit={event => { event.preventDefault(); if (values.newPassword !== values.confirmPassword) return toast.error('New passwords do not match'); mutation.mutate() }}><SettingInput label="Current password" type="password" value={values.currentPassword} set={currentPassword => setValues({ ...values, currentPassword })} disabled={mutation.isPending} /><SettingInput label="New password (12+ characters)" type="password" value={values.newPassword} set={newPassword => setValues({ ...values, newPassword })} disabled={mutation.isPending} /><SettingInput label="Confirm new password" type="password" value={values.confirmPassword} set={confirmPassword => setValues({ ...values, confirmPassword })} disabled={mutation.isPending} /><button className="btn-primary" disabled={mutation.isPending || values.newPassword.length < 12}>Change password</button></form>
+}
+
+function SmtpForm() {
+  const query = useQuery({ queryKey: ['settings', 'smtp'], queryFn: () => api.get<SmtpSettings | null>('/settings/smtp').then(response => response.data) })
+  const [values, setValues] = useState({ host: '', port: 587, secure: false, username: '', password: '', fromEmail: '', fromName: 'Infozzle HR' })
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => { if (query.data && !loaded) { setValues({ host: query.data.host, port: query.data.port, secure: query.data.secure, username: query.data.username || '', password: '', fromEmail: query.data.fromEmail, fromName: query.data.fromName || '' }); setLoaded(true) } }, [loaded, query.data])
+  const save = useMutation({ mutationFn: () => api.patch('/settings/smtp', { ...values, username: values.username || undefined, password: values.password || undefined, fromName: values.fromName || undefined }), onSuccess: () => { toast.success('SMTP settings saved'); setValues(current => ({ ...current, password: '' })); query.refetch() }, onError: error => toast.error(messageFromError(error)) })
+  const test = useMutation({ mutationFn: () => api.post<{ recipient: string }>('/settings/smtp/test'), onSuccess: response => toast.success(`Test email sent to ${response.data.recipient}`), onError: error => toast.error(messageFromError(error)) })
+  if (query.isLoading) return <Spinner />
+  if (query.isError) return <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} />
+  return <form className="card max-w-2xl space-y-4 p-6" onSubmit={event => { event.preventDefault(); save.mutate() }}><div><h2 className="font-display text-xl">Outgoing email</h2><p className="mt-1 text-sm text-black/45">Credentials are encrypted and never returned after saving.</p></div><SettingInput label="SMTP host" value={values.host} set={host => setValues({ ...values, host })} disabled={save.isPending} /><div className="grid gap-4 sm:grid-cols-2"><SettingInput label="Port" type="number" value={String(values.port)} set={port => setValues({ ...values, port: Number(port) })} disabled={save.isPending} /><label className="flex items-center gap-3 pt-7 text-sm font-semibold"><input type="checkbox" checked={values.secure} onChange={event => setValues({ ...values, secure: event.target.checked })} /> Use implicit TLS (usually port 465)</label></div><SettingInput label="Username" value={values.username} set={username => setValues({ ...values, username })} disabled={save.isPending} /><label className="block"><span className="label">Password</span><input type="password" className="field" value={values.password} placeholder={query.data?.passwordConfigured ? 'Leave blank to keep saved password' : 'SMTP password'} required={!query.data?.passwordConfigured} disabled={save.isPending} onChange={event => setValues({ ...values, password: event.target.value })} /></label><div className="grid gap-4 sm:grid-cols-2"><SettingInput label="From email address" type="email" value={values.fromEmail} set={fromEmail => setValues({ ...values, fromEmail })} disabled={save.isPending} /><SettingInput label="From name" value={values.fromName} set={fromName => setValues({ ...values, fromName })} disabled={save.isPending} /></div><div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-secondary" disabled={!query.data || test.isPending} onClick={() => test.mutate()}>Send test email</button><button className="btn-primary" disabled={save.isPending}>Save SMTP settings</button></div></form>
 }
 
 function CompanyForm({ data, disabled }: { data: SettingsData['company']; disabled: boolean }) {
