@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { api, messageFromError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import type { Employee, Paginated, User } from '../lib/types'
-import { getList } from '../lib/types'
+import { getList, isAdminRole } from '../lib/types'
 import { ConfirmDialog, ErrorState, PageHeader, Spinner, StatusBadge } from '../components/ui'
 
 type EmailTemplates = { wfhApproved: string; wfhRejected: string; managerLeaveReview: string; leaveApproved: string; leaveRejected: string }
@@ -19,8 +19,8 @@ export function SettingsPage() {
   const query = useQuery({ queryKey: ['settings'], queryFn: () => api.get<SettingsData>('/settings').then(r => r.data) })
   return <><PageHeader eyebrow="Configuration" title="Settings" description="Policies and access controls for your workspace." />
     <div className="mb-5 flex gap-1 overflow-x-auto border-b border-black/8">{['company', 'departments', 'WFH policy', 'leave types', 'email templates', 'users', 'SMTP', 'security'].map(label => { const value = label.toLowerCase().replace(' policy', '').replace(' ', '-'); return <button key={label} className={`shrink-0 px-4 py-3 text-sm font-semibold capitalize ${tab === value ? 'border-b-2 border-forest text-forest' : 'text-black/45'}`} onClick={() => setTab(value)}>{label}</button> })}</div>
-    {user?.role !== 'ADMIN' && !['security', 'smtp'].includes(tab) && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">You have read-only access. Administrators control workspace configuration.</p>}
-    {tab === 'security' ? <SecurityForm /> : tab === 'smtp' ? <SmtpForm /> : tab === 'departments' ? <DepartmentsSettings disabled={user?.role !== 'ADMIN'} /> : query.isLoading ? <Spinner /> : query.isError ? <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /> : query.data && <>{tab === 'company' && <CompanyForm data={query.data.company} disabled={user?.role !== 'ADMIN'} />}{tab === 'wfh' && <WfhForm data={query.data.wfh} disabled={user?.role !== 'ADMIN'} />}{tab === 'leave-types' && <LeaveTypes items={query.data.leaveTypes} disabled={user?.role !== 'ADMIN'} />}{tab === 'email-templates' && <EmailTemplatesForm data={query.data.emailTemplates} disabled={user?.role !== 'ADMIN'} />}{tab === 'users' && <UsersSettings disabled={user?.role !== 'ADMIN'} />}</>}
+    {!isAdminRole(user?.role) && !['security', 'smtp'].includes(tab) && <p className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">You have read-only access. Administrators control workspace configuration.</p>}
+    {tab === 'security' ? <SecurityForm /> : tab === 'smtp' ? <SmtpForm /> : tab === 'departments' ? <DepartmentsSettings disabled={!isAdminRole(user?.role)} /> : query.isLoading ? <Spinner /> : query.isError ? <ErrorState message={messageFromError(query.error)} retry={() => query.refetch()} /> : query.data && <>{tab === 'company' && <CompanyForm data={query.data.company} disabled={!isAdminRole(user?.role)} />}{tab === 'wfh' && <WfhForm data={query.data.wfh} disabled={!isAdminRole(user?.role)} />}{tab === 'leave-types' && <LeaveTypes items={query.data.leaveTypes} disabled={!isAdminRole(user?.role)} />}{tab === 'email-templates' && <EmailTemplatesForm data={query.data.emailTemplates} disabled={!isAdminRole(user?.role)} />}{tab === 'users' && <UsersSettings disabled={!isAdminRole(user?.role)} />}</>}
   </>
 }
 

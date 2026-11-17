@@ -1,4 +1,5 @@
-export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE'
+export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'HR' | 'MD'
+export const isAdminRole = (role?: Role | null) => role === 'ADMIN' || role === 'HR' || role === 'MD'
 export type Status = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'active' | 'inactive' | 'completed' | string
 
 export interface User { id: string; name: string; email: string; role: Role; employeeId?: string | null; avatarUrl?: string }

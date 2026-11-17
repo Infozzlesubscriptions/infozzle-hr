@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { LoaderCircle } from 'lucide-react'
 import { useAuth } from './lib/auth'
-import type { Role } from './lib/types'
+import { isAdminRole, type Role } from './lib/types'
 import { AppShell } from './components/AppShell'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -29,7 +29,7 @@ function RoleRoute({ roles, children }: { roles: Role[]; children: React.ReactNo
 
 function HomeRoute() {
   const { user } = useAuth()
-  return user?.role === 'ADMIN' ? <DashboardPage /> : <Navigate to="/leave" replace />
+  return isAdminRole(user?.role) ? <DashboardPage /> : <Navigate to="/leave" replace />
 }
 
 export default function App() {
@@ -37,15 +37,15 @@ export default function App() {
     <Route path="/login" element={<LoginPage />} />
     <Route element={<ProtectedRoute />}>
       <Route index element={<HomeRoute />} />
-      <Route path="employees" element={<RoleRoute roles={['ADMIN']}><EmployeesPage /></RoleRoute>} />
+      <Route path="employees" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><EmployeesPage /></RoleRoute>} />
       <Route path="leave" element={<LeavePage />} />
       <Route path="wfh" element={<WfhPage />} />
-      <Route path="calendar" element={<RoleRoute roles={['ADMIN']}><CalendarPage /></RoleRoute>} />
-      <Route path="onboarding" element={<RoleRoute roles={['ADMIN']}><OnboardingPage /></RoleRoute>} />
-      <Route path="reports" element={<RoleRoute roles={['ADMIN']}><ReportsPage /></RoleRoute>} />
-      <Route path="notifications" element={<RoleRoute roles={['ADMIN']}><NotificationsPage /></RoleRoute>} />
-      <Route path="audit-logs" element={<RoleRoute roles={['ADMIN']}><AuditLogsPage /></RoleRoute>} />
-      <Route path="settings" element={<RoleRoute roles={['ADMIN']}><SettingsPage /></RoleRoute>} />
+      <Route path="calendar" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><CalendarPage /></RoleRoute>} />
+      <Route path="onboarding" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><OnboardingPage /></RoleRoute>} />
+      <Route path="reports" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><ReportsPage /></RoleRoute>} />
+      <Route path="notifications" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><NotificationsPage /></RoleRoute>} />
+      <Route path="audit-logs" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><AuditLogsPage /></RoleRoute>} />
+      <Route path="settings" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><SettingsPage /></RoleRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>
   </Routes>

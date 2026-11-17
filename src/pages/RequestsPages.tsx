@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { api, messageFromError } from '../lib/api'
 import type { Employee, LeaveBalance, LeaveRequest, Paginated, WfhRequest, WfhUsage } from '../lib/types'
-import { employeeName, getList } from '../lib/types'
+import { employeeName, getList, isAdminRole } from '../lib/types'
 import { DataTable, type Column } from '../components/DataTable'
 import { ConfirmDialog, ErrorState, FieldError, formatDate, Modal, PageHeader, SearchField, Spinner, StatusBadge } from '../components/ui'
 import { useAuth } from '../lib/auth'
@@ -23,7 +23,7 @@ export function WfhPage() { return <RequestCenter kind="wfh" /> }
 function RequestCenter({ kind }: { kind: 'leave' | 'wfh' }) {
   const isLeave = kind === 'leave'
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin = isAdminRole(user?.role)
   const isManager = user?.role === 'MANAGER'
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
@@ -66,7 +66,7 @@ function Summary({ kind, data, loading }: { kind: 'leave' | 'wfh'; data?: LeaveB
 function RequestForm({ kind, open, close }: { kind: 'leave' | 'wfh'; open: boolean; close: () => void }) {
   const client = useQueryClient()
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin = isAdminRole(user?.role)
   const isLeave = kind === 'leave'
   const [wfhDates, setWfhDates] = useState([''])
   const employees = useQuery({ queryKey: ['employees', 'options'], enabled: open && isAdmin, placeholderData: !isAdmin && user?.employeeId ? [{ id: user.employeeId, firstName: user.name, lastName: '', email: user.email, status: 'active' }] : undefined, queryFn: () => api.get<Paginated<Employee> | Employee[]>('/employees', { params: { status: 'active', limit: 100 } }).then(r => getList(r.data)) })
@@ -82,7 +82,7 @@ function RequestDetail({ request, kind, close, act }: { request: Request | null;
   const leave = kind === 'leave' ? request as LeaveRequest : null
   const requestDate = leave?.startDate || (request as WfhRequest).date
   const upcoming = requestDate >= new Date().toISOString().slice(0, 10)
-  const canReview = user?.role === 'ADMIN' || (user?.role === 'MANAGER' && !!leave && leave.managerReviewStatus === 'pending' && request.employee.id !== user.employeeId)
-  const canCancel = user?.role === 'ADMIN' || request.employee.id === user?.employeeId
+  const canReview = isAdminRole(user?.role) || (user?.role === 'MANAGER' && !!leave && leave.managerReviewStatus === 'pending' && request.employee.id !== user.employeeId)
+  const canCancel = isAdminRole(user?.role) || request.employee.id === user?.employeeId
   return <Modal open onClose={close} title="Request details"><div className="space-y-4"><div className="flex items-center justify-between"><div><p className="font-semibold">{employeeName(request.employee)}</p><p className="text-sm text-black/45">{request.employee.email}</p></div><StatusBadge status={request.status} /></div><dl className="grid grid-cols-2 gap-4 rounded-xl bg-white p-4"><div><dt className="label">Start</dt><dd className="text-sm">{formatDate(requestDate)}</dd></div><div><dt className="label">End</dt><dd className="text-sm">{formatDate(leave?.endDate || (request as WfhRequest).endDate)}</dd></div>{leave && <div><dt className="label">Type</dt><dd className="text-sm">{leave.type}</dd></div>}{leave && <div><dt className="label">Manager review</dt><dd className="text-sm"><StatusBadge status={leave.managerReviewStatus || 'not required'} />{leave.manager && <span className="ml-2">{employeeName(leave.manager)}</span>}</dd></div>}</dl><div><p className="label">Reason</p><p className="text-sm leading-6">{request.reason || 'No reason provided'}</p></div>{leave?.managerReviewReason && <div><p className="label">Manager comment</p><p className="text-sm leading-6">{leave.managerReviewReason}</p></div>}<div className="flex flex-wrap justify-end gap-2 pt-3">{request.status === 'pending' && canReview && <><button className="btn-secondary !text-red-600" onClick={() => act('reject')}>{user?.role === 'MANAGER' ? 'Recommend rejection' : 'Reject'}</button><button className="btn-primary" onClick={() => act('approve')}>{user?.role === 'MANAGER' ? 'Recommend approval' : 'Approve'}</button></>}{upcoming && canCancel && (request.status === 'pending' || request.status === 'approved') && <button className="btn-secondary" onClick={() => act('cancel')}>Cancel request</button>}</div></div></Modal>
 }

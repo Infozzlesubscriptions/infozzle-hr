@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../lib/auth'
+import { isAdminRole } from '../lib/types'
 import { Plus } from 'lucide-react'
 
 const schema = z.object({ title: z.string().min(1, 'Required'), date: z.string().min(1, 'Required'), endDate: z.string().optional(), description: z.string().optional() })
@@ -24,7 +25,7 @@ export function CalendarPage() {
   const [selected, setSelected] = useState<CalendarEvent | null>(null)
   const [newDate, setNewDate] = useState<string | null>(null)
   const { user } = useAuth()
-  const canManageHolidays = user?.role === 'ADMIN'
+  const canManageHolidays = isAdminRole(user?.role)
   const query = useQuery({ queryKey: ['calendar', range], enabled: !!range.start, queryFn: () => api.get<CalendarEvent[]>('/calendar/events', { params: range }).then(r => r.data) })
   const clickDate = (arg: DateClickArg) => { if (canManageHolidays) setNewDate(arg.dateStr) }
   const clickEvent = (arg: EventClickArg) => setSelected({ id: arg.event.id, title: arg.event.title, start: arg.event.startStr, end: arg.event.endStr || undefined, allDay: arg.event.allDay, ...arg.event.extendedProps } as CalendarEvent)
