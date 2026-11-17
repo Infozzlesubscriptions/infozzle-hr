@@ -25,7 +25,7 @@ export function LoginPage() {
       <div className="absolute -right-28 top-20 size-96 rounded-full border-[70px] border-lime/10" /><div className="absolute -bottom-20 left-28 size-72 rounded-full bg-mint/5" />
       <div className="relative w-fit rounded-xl bg-white px-4 py-2"><img src="/infozzle-logo.png" alt="Infozzle" className="h-10 w-auto" /></div>
       <div className="relative max-w-xl"><p className="eyebrow !text-lime/70">People, thoughtfully managed</p><h1 className="mt-5 font-display text-6xl leading-[1.06] text-white">A calmer way to run your workplace.</h1><p className="mt-6 max-w-lg text-lg leading-8 text-white/55">One focused space for your people, leave, remote work, onboarding, and decisions.</p></div>
-      <p className="relative text-xs text-white/35">Secure access for MD and HR teams</p>
+      <p className="relative text-xs text-white/35">Secure access for administrators, managers, and employees</p>
     </section>
     <section className="flex items-center justify-center p-6 sm:p-12"><div className="w-full max-w-md">
       <div className="mb-10 w-fit rounded-xl border border-black/8 bg-white px-3 py-2 lg:hidden"><img src="/infozzle-logo.png" alt="Infozzle" className="h-8 w-auto" /></div>

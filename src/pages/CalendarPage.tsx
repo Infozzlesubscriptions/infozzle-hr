@@ -24,7 +24,7 @@ export function CalendarPage() {
   const [selected, setSelected] = useState<CalendarEvent | null>(null)
   const [newDate, setNewDate] = useState<string | null>(null)
   const { user } = useAuth()
-  const canManageHolidays = user?.role === 'HR' || user?.role === 'MD'
+  const canManageHolidays = user?.role === 'ADMIN'
   const query = useQuery({ queryKey: ['calendar', range], enabled: !!range.start, queryFn: () => api.get<CalendarEvent[]>('/calendar/events', { params: range }).then(r => r.data) })
   const clickDate = (arg: DateClickArg) => { if (canManageHolidays) setNewDate(arg.dateStr) }
   const clickEvent = (arg: EventClickArg) => setSelected({ id: arg.event.id, title: arg.event.title, start: arg.event.startStr, end: arg.event.endStr || undefined, allDay: arg.event.allDay, ...arg.event.extendedProps } as CalendarEvent)

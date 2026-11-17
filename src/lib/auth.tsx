@@ -25,7 +25,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { data } = await api.post<{ accessToken: string; user: User }>('/auth/login', { email, password })
-    if (!['MD', 'HR'].includes(data.user.role)) throw new Error('This portal is restricted to MD and HR accounts.')
     tokenStore.set(data.accessToken)
     setUser(data.user)
   }
