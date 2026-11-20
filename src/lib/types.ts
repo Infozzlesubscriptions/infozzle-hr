@@ -29,6 +29,10 @@ export interface DashboardData {
 }
 export interface LeaveBalance { type: string; allocated: number; used: number; remaining: number }
 export interface WfhUsage { used: number; limit: number; period: string }
+export interface EmployeeAllowances {
+  leave: { balance: number };
+  wfh: { balance: number; limit: number; reserved: number; month: string };
+}
 
 export const getList = <T>(data: Paginated<T> | T[]) => Array.isArray(data) ? data : data.results
 export const employeeName = (employee?: Employee) => employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown employee'
