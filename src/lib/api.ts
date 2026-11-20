@@ -54,7 +54,9 @@ api.interceptors.response.use(
 
 export const messageFromError = (error: unknown) => {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { error?: { message?: string; details?: unknown }; message?: string } | undefined
+    const data = error.response?.data as { error?: { message?: string; details?: Array<{ message?: string }> }; message?: string } | undefined
+    const validationMessage = data?.error?.details?.find(detail => detail.message)?.message
+    if (validationMessage) return validationMessage
     return data?.error?.message || data?.message || error.message
   }
   return error instanceof Error ? error.message : 'Something went wrong'

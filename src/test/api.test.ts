@@ -1,4 +1,5 @@
 import { api, messageFromError, tokenStore } from '../lib/api'
+import { managerReviewDecision } from '../pages/RequestsPages'
 
 describe('API authentication', () => {
   it('attaches the in-memory access token', async () => {
@@ -26,5 +27,14 @@ describe('API authentication', () => {
 
   it('reads the backend error envelope', () => {
     expect(messageFromError({ isAxiosError: true, message: 'fallback', response: { data: { error: { message: 'Request validation failed' } } } })).toBe('Request validation failed')
+  })
+
+  it('shows field-level validation details instead of the generic message', () => {
+    expect(messageFromError({ isAxiosError: true, message: 'fallback', response: { data: { error: { message: 'Request validation failed', details: [{ path: ['password'], message: 'Temporary password must be at least 12 characters' }] } } } })).toBe('Temporary password must be at least 12 characters')
+  })
+
+  it('maps manager recommendations to the backend decision enum', () => {
+    expect(managerReviewDecision('approve')).toBe('APPROVED')
+    expect(managerReviewDecision('reject')).toBe('REJECTED')
   })
 })
