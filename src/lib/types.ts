@@ -15,6 +15,12 @@ export interface LeaveRequest {
 export interface WfhRequest {
   id: string; employee: Employee; date: string; endDate?: string; days?: number; reason: string; status: Status; createdAt?: string
 }
+export interface CompoffRequest {
+  id: string; employee: Employee; workDate: string; hours: number; convertedHours: number; creditedLeaveDays: number; reason: string; status: Status; createdAt?: string; reviewerComment?: string
+}
+export interface CompoffBalance {
+  employee: Pick<Employee, 'id' | 'firstName' | 'lastName' | 'email'>; hours: number; convertedLeaveDays: number
+}
 export interface CalendarEvent { id: string; title: string; start: string; end?: string; allDay?: boolean; type?: string; description?: string; color?: string }
 export interface OnboardingRecord { id: string; employee: Employee; startDate: string; progress: number; status: Status; tasks: OnboardingTask[] }
 export interface OnboardingTask { id: string; title: string; dueDate?: string; completed: boolean; assignee?: string }
@@ -32,6 +38,7 @@ export interface WfhUsage { used: number; limit: number; period: string }
 export interface EmployeeAllowances {
   leave: { balance: number };
   wfh: { balance: number; limit: number; reserved: number; month: string };
+  compoff?: { hours: number; convertedLeaveDays: number };
 }
 
 export const getList = <T>(data: Paginated<T> | T[]) => Array.isArray(data) ? data : data.results
