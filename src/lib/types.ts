@@ -43,6 +43,10 @@ export interface DashboardData {
   headcountTrend: { label: string; value: number }[];
   leaveByDepartment: { department: string; value: number }[];
   upcoming: CalendarEvent[];
+  weeklyDeficiencies: {
+    employee: Employee; missedWeeks: number; latestWeekStart: string; latestWeekEnd: string;
+    workedMinutes: number; requiredMinutes: number; shortfallMinutes: number;
+  }[];
 }
 export interface LeaveBalance { type: string; allocated: number; used: number; remaining: number }
 export interface WfhUsage { used: number; limit: number; period: string }

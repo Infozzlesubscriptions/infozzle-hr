@@ -55,7 +55,7 @@ export function AttendancePage() {
   const { user } = useAuth()
   const admin = isAdminRole(user?.role)
   const today = istDate()
-  const [from, setFrom] = useState(daysBefore(today, 6))
+  const [from, setFrom] = useState(daysBefore(today, 59))
   const [to, setTo] = useState(today)
   const [employeeId, setEmployeeId] = useState('')
   const [status, setStatus] = useState('')
