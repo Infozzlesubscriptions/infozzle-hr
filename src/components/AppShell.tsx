@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, ChartNoAxesCombined, ClipboardCheck, Clock3, FileClock, Gauge, House, LogOut, Menu, Settings, Users, X } from 'lucide-react'
+import { Bell, CalendarDays, ChartNoAxesCombined, ClipboardCheck, Clock3, Fingerprint, FileClock, Gauge, House, LogOut, Menu, Settings, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
@@ -10,6 +10,7 @@ import { isAdminRole } from '../lib/types'
 const nav = [
   { to: '/', label: 'Overview', icon: Gauge, admin: true }, { to: '/employees', label: 'Employees', icon: Users, admin: true },
   { to: '/leave', label: 'Leave', icon: ClipboardCheck }, { to: '/wfh', label: 'Work from home', icon: House }, { to: '/compoff', label: 'Comp-off', icon: Clock3 },
+  { to: '/attendance', label: 'Attendance', icon: Fingerprint },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays, admin: true }, { to: '/onboarding', label: 'Onboarding', icon: FileClock, admin: true },
   { to: '/reports', label: 'Reports', icon: ChartNoAxesCombined, admin: true }, { to: '/audit-logs', label: 'Audit logs', icon: FileClock, admin: true },
   { to: '/settings', label: 'Settings', icon: Settings, admin: true },

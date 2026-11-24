@@ -14,6 +14,7 @@ import { NotificationsPage } from './pages/NotificationsPage'
 import { AuditLogsPage } from './pages/AuditLogsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { CompoffPage } from './pages/CompoffPage'
+import { AttendancePage } from './pages/AttendancePage'
 
 function ProtectedRoute() {
   const { user, initializing } = useAuth()
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="leave" element={<LeavePage />} />
       <Route path="wfh" element={<WfhPage />} />
       <Route path="compoff" element={<CompoffPage />} />
+      <Route path="attendance" element={<AttendancePage />} />
       <Route path="calendar" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><CalendarPage /></RoleRoute>} />
       <Route path="onboarding" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><OnboardingPage /></RoleRoute>} />
       <Route path="reports" element={<RoleRoute roles={['ADMIN', 'HR', 'MD']}><ReportsPage /></RoleRoute>} />

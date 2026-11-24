@@ -21,6 +21,17 @@ export interface CompoffRequest {
 export interface CompoffBalance {
   employee: Pick<Employee, 'id' | 'firstName' | 'lastName' | 'email'>; hours: number; convertedLeaveDays: number
 }
+export interface AttendanceRecord {
+  id: string; date: string; employee: Employee | null; etimeOfficeId: string;
+  inTime?: string | null; outTime?: string | null; workMinutes?: number | null;
+  status: string; sourceStatus?: string | null; provisional: boolean; remark?: string | null; syncedAt: string;
+}
+export interface AttendancePunch { id: string; punchAt: string; machineFlag?: string | null }
+export interface AttendanceSyncRun {
+  id: string; mode: string; status: string; fromDate: string; toDate: string;
+  rawPunchesFetched: number; rawPunchesCreated: number; dailyRowsFetched: number; dailyRowsUpserted: number;
+  unmatchedCodes?: string[]; errorMessage?: string | null; startedAt: string; finishedAt?: string | null;
+}
 export interface CalendarEvent { id: string; title: string; start: string; end?: string; allDay?: boolean; type?: string; description?: string; color?: string }
 export interface OnboardingRecord { id: string; employee: Employee; startDate: string; progress: number; status: Status; tasks: OnboardingTask[] }
 export interface OnboardingTask { id: string; title: string; dueDate?: string; completed: boolean; assignee?: string }
