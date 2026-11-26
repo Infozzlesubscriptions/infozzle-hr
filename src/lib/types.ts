@@ -10,7 +10,7 @@ export interface Employee {
 }
 export interface LeaveRequest {
   id: string; employee: Employee; type: string; startDate: string; endDate: string; days: number; reason: string; status: Status; createdAt?: string; reviewerComment?: string;
-  manager?: Employee | null; managerReviewStatus?: Status; managerReviewReason?: string | null; managerReviewedAt?: string | null
+  manager?: Employee | null; managerReviewStatus?: Status; managerReviewReason?: string | null; managerReviewedAt?: string | null; remainingBalance?: number
 }
 export interface WfhRequest {
   id: string; employee: Employee; date: string; endDate?: string; days?: number; reason: string; status: Status; createdAt?: string
